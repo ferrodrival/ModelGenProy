@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herramienta de Soporte Creativo para la Generación de Coreografías</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="frutiger-container">
+        <div class="frutiger-background"></div>
+        
+        <div class="frutiger-window">
+            <div class="frutiger-titlebar">
+                <h1><i class="fas fa-robot"></i> Herramienta de Soporte Creativo para la Generación de Coreografías</h1>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">{{ connection_status }}</span>
+                </div>
+            </div>
+            
+            <div class="frutiger-content">
+                <!-- Sección de conexión -->
+                <div class="frutiger-card">
+                    <div class="card-title">
+                        <i class="fas fa-network-wired"></i>
+                        <span>CONEXIÓN SSH</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="frutiger-form">
+                            <div class="form-group">
+                                <label><i class="fas fa-server"></i> Jump Host</label>
+                                <input type="text" id="jumpHost" class="form-input" value="turing.iimas.unam.mx">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-user"></i> Usuario Jump</label>
+                                <input type="text" id="jumpUser" class="form-input" value="sshtunnel">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-key"></i> Contraseña Jump</label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="jumpPassword" class="form-input" placeholder="●●●●●●●●">
+                                    <button class="toggle-password" onclick="togglePassword('jumpPassword')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-desktop"></i> Host Destino</label>
+                                <input type="text" id="targetHost" class="form-input" value="0.0.0.0">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-user"></i> Usuario Destino</label>
+                                <input type="text" id="targetUser" class="form-input" placeholder="rvalenzuela">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-key"></i> Contraseña Destino</label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="targetPassword" class="form-input" placeholder="●●●●●●●●">
+                                    <button class="toggle-password" onclick="togglePassword('targetPassword')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <button class="frutiger-btn btn-connect" onclick="connectSSH()" id="connectBtn">
+                                    <i class="fas fa-plug"></i> CONECTAR
+                                </button>
+                                <button class="frutiger-btn btn-disconnect" onclick="disconnectSSH()" id="disconnectBtn" disabled>
+                                    <i class="fas fa-unlink"></i> DESCONECTAR
+                                </button>
+                            </div>
+                            
+                            <div id="message" class="frutiger-message hidden"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección de comandos (simplificada) -->
+                <div class="frutiger-card" id="commandSection" style="display: none;">
+                    <div class="card-title">
+                        <i class="fas fa-terminal"></i>
+                        <span>TERMINAL DE COMANDOS</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Entrada manual -->
+                        <div class="form-group">
+                            <input type="text" id="commandInput" class="form-input" 
+                                   placeholder="Escribe un comando aquí..."
+                                   onkeypress="if(event.key === 'Enter') executeManualCommand()">
+                        </div>
+                        
+                        <div class="row">
+                            <button class="frutiger-btn" onclick="executeManualCommand(false)" style="flex: 1;">
+                                <i class="fas fa-play"></i> SIN Conda
+                            </button>
+                            <button class="frutiger-btn btn-connect" onclick="executeManualCommand(true)" style="flex: 1;">
+                                <i class="fas fa-bolt"></i> CON Conda
+                            </button>
+                        </div>
+                        
+                        <!-- Terminal output -->
+                        <div class="frutiger-terminal mt-10">
+                            <div class="terminal-header">
+                                <span>Salida de Comandos</span>
+                                <button onclick="clearTerminal()" style="background: none; border: none; color: #ccc; cursor: pointer;">
+                                    <i class="fas fa-trash"></i> Limpiar
+                                </button>
+                            </div>
+                            <pre id="outputText" class="terminal-content">Herramienta de Soporte Creativo para la Generación de Coreografías v1.0
+Esperando conexión...</pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección del modelo con selección de imágenes -->
+                <div class="frutiger-card" id="modelSection" style="display: none;">
+                    <div class="card-title">
+                        <i class="fas fa-play-circle"></i>
+                        <span>SELECCIONAR IMÁGENES PARA INSERTX.PY</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Panel TOP -->
+                            <div class="col">
+                                <div class="image-selector">
+                                    <div class="selector-header">
+                                        <h3><i class="fas fa-arrow-up"></i> Imágenes TOP</h3>
+                                        <div class="image-count" id="topCount">0</div>
+                                    </div>
+                                    <div class="main-preview">
+                                        <img id="topPreview" class="preview-image" alt="Vista previa TOP">
+                                        <div id="topNoPreview" class="no-preview-message">
+                                            <i class="fas fa-image"></i>
+                                            <span>Sin imagen seleccionada</span>
+                                        </div>
+                                    </div>
+                                    <div class="image-gallery" id="topGallery">
+                                        <div class="no-images-message" id="topNoImages">
+                                            <i class="fas fa-folder-open"></i>
+                                            <span>Coloca imágenes en sources/Top/</span>
+                                        </div>
+                                    </div>
+                                    <div class="image-nav">
+                                        <button class="nav-btn" onclick="prevImage('top')" id="topPrevBtn" disabled>
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <div class="image-counter" id="topCounter">0/0</div>
+                                        <button class="nav-btn" onclick="nextImage('top')" id="topNextBtn" disabled>
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Panel BOT -->
+                            <div class="col">
+                                <div class="image-selector">
+                                    <div class="selector-header">
+                                        <h3><i class="fas fa-arrow-down"></i> Imágenes BOT</h3>
+                                        <div class="image-count" id="botCount">0</div>
+                                    </div>
+                                    <div class="main-preview">
+                                        <img id="botPreview" class="preview-image" alt="Vista previa BOT">
+                                        <div id="botNoPreview" class="no-preview-message">
+                                            <i class="fas fa-image"></i>
+                                            <span>Sin imagen seleccionada</span>
+                                        </div>
+                                    </div>
+                                    <div class="image-gallery" id="botGallery">
+                                        <div class="no-images-message" id="botNoImages">
+                                            <i class="fas fa-folder-open"></i>
+                                            <span>Coloca imágenes en sources/Bot/</span>
+                                        </div>
+                                    </div>
+                                    <div class="image-nav">
+                                        <button class="nav-btn" onclick="prevImage('bot')" id="botPrevBtn" disabled>
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <div class="image-counter" id="botCounter">0/0</div>
+                                        <button class="nav-btn" onclick="nextImage('bot')" id="botNextBtn" disabled>
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Valores seleccionados -->
+                        <div class="selected-values">
+                            <div class="value-display">
+                                <div>TOP: <span id="selectedTopName">Ninguna</span> (Índice: <span id="selectedTopIndex">-1</span>)</div>
+                                <div>BOT: <span id="selectedBotName">Ninguna</span> (Índice: <span id="selectedBotIndex">-1</span>)</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botones de acción -->
+                        <div class="row" style="margin-top: 20px;">
+                            <button class="frutiger-btn btn-run" onclick="createInsertX()" id="uploadBtn" style="background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);">
+                                <i class="fas fa-file-code"></i>
+                                <span>CREAR INSERTX.PY EN SERVIDOR</span>
+                            </button>
+                        </div>
+                        
+                        <div class="row" style="margin-top: 10px;">
+                            <button class="frutiger-btn btn-run" onclick="runModel()" id="runBtn">
+                                <i class="fas fa-play-circle"></i>
+                                <span>EJECUTAR ACTOR-CRÍTICO</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Información del comando -->
+                        <div style="margin-top: 15px; padding: 10px; background: #E8EAF6; border-radius: 8px;">
+                            <small style="color: #3949AB; font-family: monospace;">
+                                Comando: sh srun_actor_critic.sh configs/actor_critic_music_trans_400_mix_rotmat.yaml eval
+                            </small>
+                            <br>
+                            <small style="color: #666; font-size: 0.9em;">
+                                <i class="fas fa-info-circle"></i> Se usará el insertX.py creado con los índices de imágenes seleccionadas
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección de videos generados -->
+                <div class="frutiger-card" id="videosSection" style="display: none;">
+                    <div class="card-title">
+                        <i class="fas fa-video"></i>
+                        <span>VIDEOS GENERADOS</span>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="color: var(--orange-dark);">
+                                <i class="fas fa-folder-open"></i> Videos en el servidor
+                            </h3>
+                            <button class="frutiger-btn" onclick="loadVideos()" style="background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%);">
+                                <i class="fas fa-sync-alt"></i> ACTUALIZAR LISTA
+                            </button>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px; padding: 10px; background: #EDE7F6; border-radius: 8px;">
+                            <small style="color: #5E35B1; font-family: monospace;">
+                                <i class="fas fa-info-circle"></i> Ruta: /home/rvalenzuela/tesisBailando/Bailando-main/tpami_bailandopp/experiments/actor_critic/eval_rotmat/videos/ep000010
+                            </small>
+                        </div>
+                        
+                        <!-- Filtros y búsqueda -->
+                        <div class="row" style="margin-bottom: 20px;">
+                            <div class="col">
+                                <input type="text" id="videoSearch" class="form-input" 
+                                       placeholder="Buscar video por nombre..."
+                                       onkeyup="filterVideos()">
+                            </div>
+                            <div class="col">
+                                <select id="videoFilter" class="form-input" onchange="filterVideos()">
+                                    <option value="all">Todos los videos</option>
+                                    <option value="mp4">Solo MP4</option>
+                                    <option value="recent">Más recientes primero</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Contador de videos -->
+                        <div style="text-align: center; margin-bottom: 15px; padding: 8px; background: #F3E5F5; border-radius: 6px;">
+                            <span id="videoCount">Cargando videos...</span>
+                        </div>
+                        
+                        <!-- Grid de videos -->
+                        <div class="video-grid" id="videoGrid">
+                            <div style="text-align: center; padding: 40px; color: #999;">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <p style="margin-top: 15px;">Cargando lista de videos...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Reproductor de video modal -->
+                        <div id="videoModal" class="video-modal hidden">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 id="videoModalTitle">Reproduciendo video</h3>
+                                    <button class="modal-close" onclick="closeVideoModal()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <video id="videoPlayer" controls style="width: 100%; border-radius: 8px;">
+                                        Tu navegador no soporta la reproducción de videos.
+                                    </video>
+                                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                                        <button class="frutiger-btn" onclick="downloadCurrentVideo()" 
+                                                style="background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);">
+                                            <i class="fas fa-download"></i> DESCARGAR
+                                        </button>
+                                        <button class="frutiger-btn" onclick="closeVideoModal()"
+                                                style="background: linear-gradient(135deg, #757575 0%, #616161 100%);">
+                                            <i class="fas fa-times"></i> CERRAR
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="frutiger-footer">
+                <span>Herramienta de Soporte Creativo para la Generación de Coreografías v1.0 | Control SSH + Conda</span>
+                <span id="footerImageCount">Coloca imágenes en sources/Top/ y sources/Bot/</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let connectionId = null;
+        let imagesData = {
+            top: { images: [], currentPage: 0, selectedIndex: -1 },
+            bot: { images: [], currentPage: 0, selectedIndex: -1 }
+        };
+        const IMAGES_PER_PAGE = 12;
+        let videosData = [];
+        
+        // Funciones básicas
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = input.parentElement.querySelector('.toggle-password i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+        
+        function showMessage(text, type = 'info') {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `frutiger-message message-${type}`;
+            messageEl.classList.remove('hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => messageEl.classList.add('hidden'), 5000);
+            }
+        }
+        
+        function updateStatus(connected) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const commandSection = document.getElementById('commandSection');
+            const modelSection = document.getElementById('modelSection');
+            const videosSection = document.getElementById('videosSection');
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusText.textContent = '🟢 Conectado';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                commandSection.style.display = 'block';
+                modelSection.style.display = 'block';
+                videosSection.style.display = 'block';
+                
+                // Cargar imágenes al conectar
+                loadImages();
+                
+                // Cargar videos automáticamente
+                setTimeout(() => loadVideos(), 1000);
+                
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = '🔴 Desconectado';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                commandSection.style.display = 'none';
+                modelSection.style.display = 'none';
+                videosSection.style.display = 'none';
+                
+                // Limpiar imágenes al desconectar
+                imagesData.top.images = [];
+                imagesData.bot.images = [];
+                videosData = [];
+                renderGallery('top');
+                renderGallery('bot');
+                renderVideoGrid();
+                updateSelectionDisplay();
+            }
+        }
+        
+        function clearTerminal() {
+            document.getElementById('outputText').textContent = 'Terminal limpiada\n';
+        }
+        
+        function appendOutput(text) {
+            const outputText = document.getElementById('outputText');
+            outputText.textContent += text + '\n';
+            outputText.scrollTop = outputText.scrollHeight;
+        }
+        
+        // Funciones SSH
+        async function connectSSH() {
+            const jumpHost = document.getElementById('jumpHost').value;
+            const jumpUser = document.getElementById('jumpUser').value;
+            const jumpPassword = document.getElementById('jumpPassword').value;
+            const targetHost = document.getElementById('targetHost').value;
+            const targetUser = document.getElementById('targetUser').value;
+            const targetPassword = document.getElementById('targetPassword').value;
+            
+            if (!jumpHost || !jumpUser || !jumpPassword || !targetHost || !targetUser || !targetPassword) {
+                showMessage('Completa todos los campos', 'error');
+                return;
+            }
+            
+            showMessage('Conectando...', 'info');
+            appendOutput('\n=== INTENTANDO CONEXIÓN ===');
+            
+            try {
+                const response = await fetch('/connect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        jump_host: jumpHost,
+                        jump_user: jumpUser,
+                        jump_password: jumpPassword,
+                        target_host: targetHost,
+                        target_user: targetUser,
+                        target_password: targetPassword
+                    })
+                });
+                
+                const data = await response.json();
+                appendOutput(`Respuesta del servidor: ${data.message.substring(0, 100)}...`);
+                
+                if (data.success) {
+                    connectionId = data.connection_id;
+                    showMessage('✅ Conectado exitosamente', 'success');
+                    updateStatus(true);
+                    
+                    // Limpiar contraseñas
+                    document.getElementById('jumpPassword').value = '';
+                    document.getElementById('targetPassword').value = '';
+                    
+                    // Mostrar mensaje inicial
+                    appendOutput('\n=== CONEXIÓN ESTABLECIDA ===');
+                    appendOutput(data.message);
+                    
+                } else {
+                    showMessage('❌ ' + data.message, 'error');
+                }
+            } catch (error) {
+                appendOutput('❌ Error de conexión: ' + error.message);
+                showMessage('❌ Error de conexión: ' + error.message, 'error');
+            }
+        }
+        
+        async function disconnectSSH() {
+            try {
+                const response = await fetch('/disconnect', {method: 'POST'});
+                const data = await response.json();
+                showMessage(data.message, 'success');
+                updateStatus(false);
+                connectionId = null;
+                appendOutput('=== DESCONECTADO ===');
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+        
+        // Función para cargar imágenes
+        async function loadImages() {
+            try {
+                appendOutput('\n=== CARGANDO IMÁGENES LOCALES ===');
+                const response = await fetch('/get_images');
+                const data = await response.json();
+                
+                if (data.success) {
+                    imagesData.top.images = data.images.top_images || [];
+                    imagesData.bot.images = data.images.bot_images || [];
+                    
+                    // Actualizar contadores
+                    document.getElementById('topCount').textContent = imagesData.top.images.length;
+                    document.getElementById('botCount').textContent = imagesData.bot.images.length;
+                    document.getElementById('footerImageCount').textContent = 
+                        `TOP: ${imagesData.top.images.length} | BOT: ${imagesData.bot.images.length} imágenes`;
+                    
+                    appendOutput(`✓ Imágenes TOP: ${imagesData.top.images.length}`);
+                    appendOutput(`✓ Imágenes BOT: ${imagesData.bot.images.length}`);
+                    
+                    // Inicializar vistas
+                    renderGallery('top');
+                    renderGallery('bot');
+                    
+                    showMessage('✅ Imágenes cargadas', 'success');
+                } else {
+                    appendOutput('✗ Error: ' + data.message);
+                    showMessage('⚠️ ' + data.message, 'warning');
+                }
+            } catch (error) {
+                appendOutput('✗ Error cargando imágenes: ' + error.message);
+                console.error('Error cargando imágenes:', error);
+            }
+        }
+        
+        // Renderizar galería
+        function renderGallery(type) {
+            const gallery = document.getElementById(`${type}Gallery`);
+            const images = imagesData[type].images;
+            const currentPage = imagesData[type].currentPage;
+            const selectedIndex = imagesData[type].selectedIndex;
+            
+            // Limpiar galería
+            gallery.innerHTML = '';
+            
+            if (images.length === 0) {
+                // Mostrar mensaje de no hay imágenes
+                const noImagesMsg = document.getElementById(`${type}NoImages`);
+                if (noImagesMsg) {
+                    gallery.appendChild(noImagesMsg);
+                }
+                
+                // Deshabilitar navegación
+                document.getElementById(`${type}PrevBtn`).disabled = true;
+                document.getElementById(`${type}NextBtn`).disabled = true;
+                document.getElementById(`${type}Counter`).textContent = '0/0';
+                
+                // Ocultar preview
+                document.getElementById(`${type}Preview`).style.display = 'none';
+                document.getElementById(`${type}NoPreview`).style.display = 'flex';
+                
+                return;
+            }
+            
+            // Calcular índices de paginación
+            const totalPages = Math.ceil(images.length / IMAGES_PER_PAGE);
+            const startIdx = currentPage * IMAGES_PER_PAGE;
+            const endIdx = Math.min(startIdx + IMAGES_PER_PAGE, images.length);
+            
+            // Crear elementos de galería
+            for (let i = startIdx; i < endIdx; i++) {
+                const imgPath = images[i];
+                const item = document.createElement('div');
+                item.className = `gallery-item ${i === selectedIndex ? 'selected' : ''}`;
+                item.onclick = () => selectImage(type, i);
+                
+                const img = document.createElement('img');
+                img.className = 'gallery-image';
+                img.src = `/images/${imgPath}`;
+                img.loading = 'lazy';
+                img.onerror = function() { 
+                    this.style.display = 'none';
+                    item.style.background = '#f0f0f0';
+                    item.innerHTML = `<div style="text-align: center; padding: 10px; color: #666;">
+                        <i class="fas fa-file-image"></i><br>
+                        <small>${imgPath.split('/').pop()}</small>
+                    </div>`;
+                };
+                
+                const indexBadge = document.createElement('div');
+                indexBadge.className = 'image-index';
+                indexBadge.textContent = `#${i}`;
+                
+                item.appendChild(img);
+                item.appendChild(indexBadge);
+                gallery.appendChild(item);
+            }
+            
+            // Actualizar contador
+            document.getElementById(`${type}Counter`).textContent = `${currentPage + 1}/${totalPages}`;
+            
+            // Actualizar botones de navegación
+            document.getElementById(`${type}PrevBtn`).disabled = currentPage === 0;
+            document.getElementById(`${type}NextBtn`).disabled = currentPage >= totalPages - 1;
+            
+            // Actualizar vista previa si hay selección
+            if (selectedIndex >= 0 && selectedIndex < images.length) {
+                updatePreview(type, selectedIndex);
+            }
+        }
+        
+        // Navegación de imágenes
+        function nextImage(type) {
+            const totalPages = Math.ceil(imagesData[type].images.length / IMAGES_PER_PAGE);
+            if (imagesData[type].currentPage < totalPages - 1) {
+                imagesData[type].currentPage++;
+                renderGallery(type);
+            }
+        }
+        
+        function prevImage(type) {
+            if (imagesData[type].currentPage > 0) {
+                imagesData[type].currentPage--;
+                renderGallery(type);
+            }
+        }
+        
+        // Seleccionar imagen
+        function selectImage(type, index) {
+            imagesData[type].selectedIndex = index;
+            
+            // Actualizar vista previa
+            updatePreview(type, index);
+            
+            // Actualizar selección en la galería
+            renderGallery(type);
+            
+            // Actualizar display de selección
+            updateSelectionDisplay();
+            
+            appendOutput(`✓ ${type.toUpperCase()} seleccionado: ${imagesData[type].images[index]} (índice: ${index})`);
+        }
+        
+        // Actualizar vista previa
+        function updatePreview(type, index) {
+            const preview = document.getElementById(`${type}Preview`);
+            const noPreview = document.getElementById(`${type}NoPreview`);
+            const imgPath = imagesData[type].images[index];
+            
+            if (imgPath) {
+                preview.src = `/images/${imgPath}`;
+                preview.style.display = 'block';
+                noPreview.style.display = 'none';
+            } else {
+                preview.style.display = 'none';
+                noPreview.style.display = 'flex';
+            }
+        }
+        
+        // Actualizar display de selección
+        function updateSelectionDisplay() {
+            const topSelected = imagesData.top.selectedIndex;
+            const botSelected = imagesData.bot.selectedIndex;
+            
+            const topName = topSelected >= 0 ? imagesData.top.images[topSelected].split('/').pop() : 'Ninguna';
+            const botName = botSelected >= 0 ? imagesData.bot.images[botSelected].split('/').pop() : 'Ninguna';
+            
+            document.getElementById('selectedTopName').textContent = topName;
+            document.getElementById('selectedTopIndex').textContent = topSelected;
+            
+            document.getElementById('selectedBotName').textContent = botName;
+            document.getElementById('selectedBotIndex').textContent = botSelected;
+        }
+        
+        // Crear insertX.py en el servidor
+        async function createInsertX() {
+            if (!connectionId) {
+                showMessage('No estás conectado. Conéctate primero.', 'error');
+                appendOutput('\n=== ERROR: No hay conexión activa ===');
+                return;
+            }
+            
+            const topIndex = imagesData.top.selectedIndex;
+            const botIndex = imagesData.bot.selectedIndex;
+            
+            if (topIndex === -1 || botIndex === -1) {
+                showMessage('Selecciona una imagen TOP y una BOT', 'warning');
+                return;
+            }
+            
+            const topFilename = imagesData.top.images[topIndex];
+            const botFilename = imagesData.bot.images[botIndex];
+            
+            showMessage('Creando insertX.py en el servidor...', 'info');
+            appendOutput(`\n=== CREANDO INSERTX.PY EN SERVIDOR ===`);
+            appendOutput(`Índices seleccionados: TOP=${topIndex}, BOT=${botIndex}`);
+            appendOutput(`Archivos: TOP=${topFilename}, BOT=${botFilename}`);
+            
+            try {
+                const response = await fetch('/create_insertx', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        top_index: topIndex,
+                        bot_index: botIndex,
+                        top_filename: topFilename,
+                        bot_filename: botFilename
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    appendOutput('✅ insertX.py creado exitosamente en el servidor');
+                    appendOutput(data.message || '');
+                    showMessage('✅ insertX.py creado exitosamente', 'success');
+                    
+                    // Mostrar contenido del archivo creado
+                    if (data.content) {
+                        appendOutput('\n=== CONTENIDO DE INSERTX.PY ===');
+                        appendOutput(data.content);
+                    }
+                } else {
+                    appendOutput('❌ Error: ' + data.message);
+                    showMessage('❌ ' + data.message, 'error');
+                }
+                
+            } catch (error) {
+                appendOutput('❌ Error de conexión: ' + error.message);
+                showMessage('❌ Error creando archivo', 'error');
+            }
+        }
+        
+        // Función para ejecutar el modelo actor-crítico
+        async function runModel() {
+            if (!connectionId) {
+                showMessage('No estás conectado. Conéctate primero.', 'error');
+                appendOutput('\n=== ERROR: No hay conexión activa ===');
+                return;
+            }
+            
+            // Verificar que insertX.py esté creado (opcional)
+            const topIndex = imagesData.top.selectedIndex;
+            const botIndex = imagesData.bot.selectedIndex;
+            
+            if (topIndex === -1 || botIndex === -1) {
+                showMessage('Selecciona imágenes primero', 'warning');
+                return;
+            }
+            
+            showMessage('Ejecutando modelo actor-crítico...', 'info');
+            appendOutput(`\n=== EJECUTANDO MODELO ACTOR-CRÍTICO ===`);
+            appendOutput(`Usando índices: TOP=${topIndex}, BOT=${botIndex}`);
+            
+            try {
+                const response = await fetch('/run_model', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        top_index: topIndex,
+                        bot_index: botIndex
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    appendOutput('✅ Modelo actor-crítico ejecutado correctamente');
+                    if (data.result.output) {
+                        appendOutput('\n=== SALIDA DEL MODELO ===');
+                        appendOutput(data.result.output);
+                    }
+                    if (data.result.error) {
+                        appendOutput('\n=== ERRORES ===');
+                        appendOutput(data.result.error);
+                    }
+                    appendOutput(`↵ Exit code: ${data.result.exit_code}`);
+                    showMessage('✅ Modelo ejecutado correctamente', 'success');
+                } else {
+                    appendOutput('❌ Error: ' + data.message);
+                    showMessage('❌ ' + data.message, 'error');
+                }
+                
+            } catch (error) {
+                appendOutput('❌ Error de conexión: ' + error.message);
+                showMessage('❌ Error ejecutando modelo', 'error');
+            }
+        }
+        
+        // Función principal para ejecutar comandos
+        async function executeCommand(command, useConda = false) {
+            if (!connectionId) {
+                showMessage('No estás conectado', 'error');
+                return;
+            }
+            
+            appendOutput(`\n$ ${command}`);
+            
+            try {
+                const response = await fetch('/execute', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        command: command,
+                        use_conda: useConda
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.result.output) {
+                        appendOutput(data.result.output);
+                    }
+                    if (data.result.error) {
+                        appendOutput('⚠️ ' + data.result.error);
+                    }
+                    appendOutput(`↵ Exit code: ${data.result.exit_code}`);
+                } else {
+                    appendOutput('❌ ' + data.message);
+                }
+                
+            } catch (error) {
+                appendOutput('❌ Error de conexión: ' + error.message);
+            }
+        }
+        
+        // Funciones de ayuda
+        function executeManualCommand(useConda = false) {
+            const command = document.getElementById('commandInput').value;
+            if (!command) {
+                showMessage('Escribe un comando', 'warning');
+                return;
+            }
+            executeCommand(command, useConda);
+            document.getElementById('commandInput').value = '';
+        }
+        
+        // Función para cargar la lista de videos
+        async function loadVideos() {
+            if (!connectionId) {
+                showMessage('No estás conectado. Conéctate primero.', 'error');
+                return;
+            }
+            
+            showMessage('Cargando lista de videos...', 'info');
+            appendOutput('\n=== CARGANDO LISTA DE VIDEOS ===');
+            
+            try {
+                const response = await fetch('/get_videos', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        connection_id: connectionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    videosData = data.videos || [];
+                    renderVideoGrid();
+                    updateVideoCount();
+                    showMessage(`✅ ${videosData.length} videos cargados`, 'success');
+                    appendOutput(`✓ Videos encontrados: ${videosData.length}`);
+                    
+                    // Mostrar la sección de videos si está oculta
+                    document.getElementById('videosSection').style.display = 'block';
+                } else {
+                    showMessage('❌ ' + data.message, 'error');
+                    appendOutput('✗ Error: ' + data.message);
+                }
+                
+            } catch (error) {
+                appendOutput('✗ Error cargando videos: ' + error.message);
+                showMessage('❌ Error cargando videos', 'error');
+            }
+        }
+        
+        // Función para renderizar la grid de videos
+        function renderVideoGrid(filteredVideos = null) {
+            const videos = filteredVideos || videosData;
+            const videoGrid = document.getElementById('videoGrid');
+            
+            if (videos.length === 0) {
+                videoGrid.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #999; grid-column: 1 / -1;">
+                        <i class="fas fa-film fa-3x" style="opacity: 0.3;"></i>
+                        <p style="margin-top: 15px;">No se encontraron videos MP4 en la carpeta</p>
+                        <small>Los videos se generan después de ejecutar el modelo actor-crítico</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            videos.forEach((video, index) => {
+                const fileName = video.filename;
+                const fileSize = formatFileSize(video.size);
+                const modified = new Date(video.modified * 1000).toLocaleDateString();
+                
+                html += `
+                    <div class="video-card">
+                        <div class="video-thumbnail" onclick="playVideo('${fileName}', ${index})">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="video-info">
+                            <div class="video-title" title="${fileName}">${fileName}</div>
+                            <div class="video-meta">
+                                <span>${fileSize}</span>
+                                <span>${modified}</span>
+                            </div>
+                            <div class="video-actions">
+                                <button class="video-btn btn-play" onclick="playVideo('${fileName}', ${index})">
+                                    <i class="fas fa-play"></i> REPRODUCIR
+                                </button>
+                                <button class="video-btn btn-download" onclick="downloadVideo('${fileName}', ${index})">
+                                    <i class="fas fa-download"></i> DESCARGAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            videoGrid.innerHTML = html;
+        }
+        
+        // Función para formatear tamaño de archivo
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Función para actualizar contador de videos
+        function updateVideoCount() {
+            const count = videosData.length;
+            const videoCount = document.getElementById('videoCount');
+            videoCount.innerHTML = `
+                <i class="fas fa-video"></i> 
+                ${count} video${count !== 1 ? 's' : ''} encontrado${count !== 1 ? 's' : ''}
+                <small style="color: #666;">(solo archivos .mp4)</small>
+            `;
+        }
+        
+        // Función para filtrar videos
+        function filterVideos() {
+            const searchTerm = document.getElementById('videoSearch').value.toLowerCase();
+            const filterType = document.getElementById('videoFilter').value;
+            
+            let filtered = [...videosData];
+            
+            // Filtrar por búsqueda
+            if (searchTerm) {
+                filtered = filtered.filter(video => 
+                    video.filename.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Aplicar filtros adicionales
+            if (filterType === 'mp4') {
+                filtered = filtered.filter(video => video.filename.toLowerCase().endsWith('.mp4'));
+            } else if (filterType === 'recent') {
+                filtered.sort((a, b) => b.modified - a.modified);
+            }
+            
+            renderVideoGrid(filtered);
+            
+            // Actualizar contador temporal
+            if (filtered.length !== videosData.length) {
+                document.getElementById('videoCount').innerHTML = `
+                    <i class="fas fa-filter"></i> 
+                    Mostrando ${filtered.length} de ${videosData.length} videos
+                `;
+            } else {
+                updateVideoCount();
+            }
+        }
+        
+        // Función para reproducir video
+        function playVideo(filename, index) {
+            const modal = document.getElementById('videoModal');
+            const player = document.getElementById('videoPlayer');
+            const title = document.getElementById('videoModalTitle');
+            
+            title.textContent = `Reproduciendo: ${filename}`;
+            player.src = `/stream_video/${encodeURIComponent(filename)}?connection_id=${connectionId}`;
+            
+            modal.classList.remove('hidden');
+            
+            // Intentar cargar y reproducir
+            player.load();
+            player.play().catch(e => {
+                console.log('Auto-play bloqueado:', e);
+            });
+            
+            appendOutput(`\n▶ Reproduciendo video: ${filename}`);
+        }
+        
+        // Función para cerrar el modal
+        function closeVideoModal() {
+            const modal = document.getElementById('videoModal');
+            const player = document.getElementById('videoPlayer');
+            
+            player.pause();
+            player.src = '';
+            modal.classList.add('hidden');
+        }
+        
+        // Función para descargar video
+        function downloadVideo(filename, index) {
+            showMessage(`Iniciando descarga: ${filename}`, 'info');
+            
+            // Crear enlace de descarga
+            const downloadUrl = `/download_video/${encodeURIComponent(filename)}?connection_id=${connectionId}`;
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            appendOutput(`\n↓ Descargando video: ${filename}`);
+            showMessage(`✅ Descarga iniciada: ${filename}`, 'success');
+        }
+        
+        // Función para descargar video actual en el reproductor
+        function downloadCurrentVideo() {
+            const player = document.getElementById('videoPlayer');
+            const src = player.src;
+            if (src) {
+                const filename = src.split('/').pop();
+                downloadVideo(decodeURIComponent(filename), -1);
+            }
+        }
+        
+        // Cargar estado inicial
+        window.onload = async function() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                if (data.connected) {
+                    connectionId = data.connection_id || 'default';
+                    updateStatus(true);
+                    appendOutput('=== SESIÓN RECONECTADA ===');
+                }
+            } catch (error) {
+                console.log('Estado inicial: Desconectado');
+            }
+        };
+    </script>
+</body>
+</html>
